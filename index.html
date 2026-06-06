@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>互动式重组句练习</title>
+<style>
+    :root { --primary: #6c5ce7; --bg: #f0f3f7; }
+    * { box-sizing: border-box; }
+    body { font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif; background: var(--bg); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 20px; }
+    .container { width: 90%; max-width: 800px; background: white; padding: 40px; border-radius: 30px; box-shadow: 0 20px 50px rgba(0,0,0,0.1); text-align: center; }
+    h1 { color: #2d3436; margin-bottom: 10px; font-size: 28px; }
+    #home h1 { font-size: 46px; margin-bottom: 35px; letter-spacing: 2px; }
+    .mode-grid { display:flex; flex-wrap:wrap; gap:20px; justify-content:center; }
+    .mode-btn { flex:1; min-width:220px; padding:38px 24px; border:none; border-radius:25px; cursor:pointer; color:white; font-weight:bold; transition: transform .2s; text-align:left; }
+    .mode-btn:hover { transform: translateY(-6px); }
+    .mode-btn .big { font-size:32px; display:block; margin-bottom:8px; }
+    .mode-btn .small { font-size:15px; opacity:.9; font-weight:normal; }
+    .mode-shi { background: linear-gradient(135deg, #6c5ce7, #a29bfe); box-shadow: 0 10px 25px rgba(108,92,231,.35); }
+    .mode-de  { background: linear-gradient(135deg, #00b894, #55efc4); box-shadow: 0 10px 25px rgba(0,184,148,.35); }
+    .mode-btn .resume { display:block; margin-top:10px; font-size:13px; background:rgba(255,255,255,.25); padding:4px 10px; border-radius:20px; width:fit-content; }
+    .topbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; }
+    .home-link { background:none; border:none; color:#636e72; font-size:15px; cursor:pointer; padding:6px 10px; border-radius:10px; }
+    .home-link:hover { background:#f0f3f7; }
+    #q-progress { color:#636e72; }
+    .answer-area { min-height: 80px; background: #dfe6e9; border-radius: 20px; border: 3px dashed #b2bec3; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 15px; padding: 20px; margin: 15px 0 35px; transition: all 0.3s; }
+    .word-pool { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-bottom: 30px; }
+    .word-card { background: linear-gradient(135deg, #6c5ce7, #a29bfe); color: white; padding: 15px 25px; border-radius: 15px; font-size: 22px; font-weight: bold; cursor: pointer; user-select: none; box-shadow: 0 5px 15px rgba(108, 92, 231, 0.3); transition: transform 0.2s, background 0.2s; }
+    .word-card:hover { transform: translateY(-5px); background: linear-gradient(135deg, #a29bfe, #6c5ce7); }
+    .word-card.used { opacity: 0.3; cursor: default; pointer-events: none; }
+    .controls { display: flex; justify-content: center; gap: 15px; flex-wrap:wrap; }
+    button { padding: 12px 30px; border: none; border-radius: 50px; font-size: 18px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+    button:hover { filter: brightness(.95); }
+    .reset-btn { background: #fab1a0; color: #d63031; }
+    .check-btn { background: #55efc4; color: #00b894; }
+    .next-btn { background: #74b9ff; color: #0984e3; }
+    #feedback { margin-top: 25px; font-size: 24px; font-weight: bold; min-height: 35px; }
+    #feedback .ans { display:block; font-size:18px; color:#636e72; font-weight:normal; margin-top:8px; }
+    .hidden { display:none !important; }
+</style>
+</head>
+<body>
+
+<div class="container" id="home">
+    <h1>句子重组练习</h1>
+    <div class="mode-grid">
+        <button class="mode-btn mode-shi" onclick="startMode('shi')">
+            <span class="big">是…的句</span>
+            <span class="small" id="cnt-shi"></span>
+            <span class="resume" id="resume-shi"></span>
+        </button>
+        <button class="mode-btn mode-de" onclick="startMode('de')">
+            <span class="big">补语得</span>
+            <span class="small" id="cnt-de"></span>
+            <span class="resume" id="resume-de"></span>
+        </button>
+    </div>
+</div>
+
+<div class="container hidden" id="practice">
+    <div class="topbar">
+        <button class="home-link" onclick="goHome()">← 回首页</button>
+        <div id="q-progress"></div>
+    </div>
+    <h1 id="mode-title"></h1>
+    <div id="answer-area" class="answer-area"></div>
+    <div id="word-pool" class="word-pool"></div>
+    <div id="feedback"></div>
+    <div class="controls">
+        <button class="reset-btn" onclick="resetCurrent()">重填 ↺</button>
+        <button class="check-btn" onclick="checkAnswer()">送出答案 ✓</button>
+        <button class="next-btn" onclick="nextQuestion()">下一题 ➔</button>
+    </div>
+</div>
+
+<script>
+const SHI = [
+  {s:"你们是几点到的？",w:["你们", "是", "几点", "到", "的"]},
+  {s:"他是去年结婚的。",w:["他", "是", "去年", "结婚", "的"]},
+  {s:"我不是昨天到的。",w:["我", "不是", "昨天", "到", "的"]},
+  {s:"是的，是我推荐的。",w:["是的", "是", "我", "推荐", "的"]},
+  {s:"他是怎么受伤的？",w:["他", "是", "怎么", "受伤", "的"]},
+  {s:"你们是怎么认识的？",w:["你们", "是", "怎么", "认识", "的"]},
+  {s:"他是昨天到的吗？",w:["他", "是", "昨天", "到", "的", "吗"]},
+  {s:"他是坐高铁来的。",w:["他", "是", "坐", "高铁", "来", "的"]},
+  {s:"是的，这是她做的。",w:["是的", "这", "是", "她", "做", "的"]},
+  {s:"你是什么时候来的？",w:["你", "是", "什么", "时候", "来", "的"]},
+  {s:"我是昨天到的北京。",w:["我", "是", "昨天", "到", "的", "北京"]},
+  {s:"他是从门口进来的。",w:["他", "是", "从", "门口", "进来", "的"]},
+  {s:"他不是坐地铁来的。",w:["他", "不是", "坐", "地铁", "来", "的"]},
+  {s:"是的，我是昨天到的。",w:["是的", "我", "是", "昨天", "到", "的"]},
+  {s:"你们是怎么去北京的？",w:["你们", "是", "怎么", "去", "北京", "的"]},
+  {s:"我们是在大学认识的。",w:["我们", "是", "在", "大学", "认识", "的"]},
+  {s:"我们是走路去公园的。",w:["我们", "是", "走路", "去", "公园", "的"]},
+  {s:"他们不是从上海来的。",w:["他们", "不是", "从", "上海", "来", "的"]},
+  {s:"他不是为了钱工作的。",w:["他", "不是", "为了", "钱", "工作", "的"]},
+  {s:"他是什么时候出国的？",w:["他", "是", "什么", "时候", "出国", "的"]},
+  {s:"他是在上个月出国的。",w:["他", "是", "在", "上个月", "出国", "的"]},
+  {s:"他是为什么离开公司的？",w:["他", "是", "为什么", "离开", "公司", "的"]},
+  {s:"我不是在办公室找到的。",w:["我", "不是", "在", "办公室", "找到", "的"]},
+  {s:"这封信是谁写的？",w:["这", "封", "信", "是", "谁", "写", "的"]},
+  {s:"这个礼物是谁买的？",w:["这", "个", "礼物", "是", "谁", "买", "的"]},
+  {s:"这个蛋糕是谁做的？",w:["这", "个", "蛋糕", "是", "谁", "做", "的"]},
+  {s:"这封信是秘书写的。",w:["这", "封", "信", "是", "秘书", "写", "的"]},
+  {s:"这个主意是谁想的？",w:["这", "个", "主意", "是", "谁", "想", "的"]},
+  {s:"她是从哪里学的中文？",w:["她", "是", "从", "哪里", "学", "的", "中文"]},
+  {s:"这件事是怎么发生的？",w:["这", "件", "事", "是", "怎么", "发生", "的"]},
+  {s:"我们是从网上买的票。",w:["我们", "是", "从", "网上", "买", "的", "票"]},
+  {s:"她是用电话通知我的。",w:["她", "是", "用", "电话", "通知", "我", "的"]},
+  {s:"这件事是昨天发生的。",w:["这", "件", "事", "是", "昨天", "发生", "的"]},
+  {s:"他是跟同事一起去的。",w:["他", "是", "跟", "同事", "一起", "去", "的"]},
+  {s:"这个蛋糕不是我做的。",w:["这", "个", "蛋糕", "不是", "我", "做", "的"]},
+  {s:"这件事不是他决定的。",w:["这", "件", "事", "不是", "他", "决定", "的"]},
+  {s:"这个礼物不是我买的。",w:["这", "个", "礼物", "不是", "我", "买", "的"]},
+  {s:"他是打球的时候摔的。",w:["他", "是", "打球", "的", "时候", "摔", "的"]},
+  {s:"我是从新闻上看到的。",w:["我", "是", "从", "新闻", "上", "看到", "的"]},
+  {s:"他是在哪个大学毕业的？",w:["他", "是", "在", "哪个", "大学", "毕业", "的"]},
+  {s:"他是坐计程车去的机场。",w:["他", "是", "坐", "计程车", "去", "的", "机场"]},
+  {s:"我不是跟他们一起去的。",w:["我", "不是", "跟", "他们", "一起", "去", "的"]},
+  {s:"不是，他不是坐高铁来的。",w:["不是", "他", "不是", "坐", "高铁", "来", "的"]},
+  {s:"是的，我们是坐飞机去的。",w:["是的", "我们", "是", "坐", "飞机", "去", "的"]},
+  {s:"是的，他是我的大学同学。",w:["是的", "他", "是", "我", "的", "大学", "同学"]},
+  {s:"是为妈妈的生日准备的。",w:["是", "为", "妈妈", "的", "生日", "准备", "的"]},
+  {s:"你是为什么选择这个工作？",w:["你", "是", "为什么", "选择", "这", "个", "工作"]},
+  {s:"我们是大家一起讨论解决的。",w:["我们", "是", "大家", "一起", "讨论", "解决", "的"]},
+  {s:"他是最晚到的那个。",w:["他", "是", "最", "晚", "到", "的", "那", "个"]},
+  {s:"这个包是我妈妈买的。",w:["这", "个", "包", "是", "我", "妈妈", "买", "的"]},
+  {s:"这本书是朋友送我的。",w:["这", "本", "书", "是", "朋友", "送", "我", "的"]},
+  {s:"你是跟谁一起去上海的？",w:["你", "是", "跟", "谁", "一起", "去", "上海", "的"]},
+  {s:"我的手机是在车上丢的。",w:["我", "的", "手机", "是", "在", "车上", "丢", "的"]},
+  {s:"这个餐厅是你推荐的吗？",w:["这", "个", "餐厅", "是", "你", "推荐", "的", "吗"]},
+  {s:"这条裙子是在哪里买的？",w:["这", "条", "裙子", "是", "在", "哪里", "买", "的"]},
+  {s:"是在那家新开的店买的。",w:["是", "在", "那家", "新开", "的", "店", "买", "的"]},
+  {s:"这份礼物是为谁准备的？",w:["这", "份", "礼物", "是", "为", "谁", "准备", "的"]},
+  {s:"你是坐什么车来学校的？",w:["你", "是", "坐", "什么", "车", "来", "学校", "的"]},
+  {s:"不是，我是在上海学的中文。",w:["不是", "我", "是", "在", "上海", "学", "的", "中文"]},
+  {s:"是的，我是跟朋友一起去的。",w:["是的", "我", "是", "跟", "朋友", "一起", "去", "的"]},
+  {s:"你的钱包是在哪里不见的？",w:["你", "的", "钱包", "是", "在", "哪里", "不见", "的"]},
+  {s:"我是在网上看教学学会的。",w:["我", "是", "在", "网上", "看", "教学", "学会", "的"]},
+  {s:"我是跟小李一起去上海的。",w:["我", "是", "跟", "小李", "一起", "去", "上海", "的"]},
+  {s:"那件事是发生在去年冬天。",w:["那", "件", "事", "是", "发生", "在", "去年", "冬天"]},
+  {s:"你是用什么方法解决的问题？",w:["你", "是", "用", "什么", "方法", "解决", "的", "问题"]},
+  {s:"他是从哪一年开始学的日语？",w:["他", "是", "从", "哪一年", "开始", "学", "的", "日语"]},
+  {s:"我们是上周完成的那个项目。",w:["我们", "是", "上周", "完成", "的", "那", "个", "项目"]},
+  {s:"你们是怎么解决这个问题的？",w:["你们", "是", "怎么", "解决", "这", "个", "问题", "的"]},
+  {s:"我是昨天下午三点到的北京。",w:["我", "是", "昨天", "下午", "三点", "到", "的", "北京"]},
+  {s:"这份报告是什么时候完成的？",w:["这", "份", "报告", "是", "什么", "时候", "完成", "的"]},
+  {s:"你是从哪一年开始学画画的？",w:["你", "是", "从", "哪一年", "开始", "学", "画画", "的"]},
+  {s:"他是在什么情况下告诉你的？",w:["他", "是", "在", "什么", "情况", "下", "告诉", "你", "的"]},
+  {s:"你们是坐飞机还是坐火车来的？",w:["你们", "是", "坐", "飞机", "还是", "坐", "火车", "来", "的"]},
+  {s:"我是因为生病才没参加会议的。",w:["我", "是", "因为", "生病", "才", "没", "参加", "会议", "的"]},
+  {s:"我们是坐最后一班地铁回家的。",w:["我们", "是", "坐", "最后", "一", "班", "地铁", "回家", "的"]},
+  {s:"这辆车是他爸爸买给他的。",w:["这", "辆", "车", "是", "他", "爸爸", "买", "给", "他", "的"]},
+  {s:"他不是为了钱才做这件事的。",w:["他", "不是", "为了", "钱", "才", "做", "这", "件", "事", "的"]},
+  {s:"你不是说要跟我们一起去吗？",w:["你", "不是", "说", "要", "跟", "我们", "一起", "去", "的", "吗"]},
+  {s:"我们不是走这条路，我们走错了。",w:["我们", "不是", "走", "这", "条", "路", "的", "我们", "走", "错", "了"]},
+  {s:"这个错误是我写报告时不小心犯的。",w:["这", "个", "错误", "是", "我", "写", "报告", "时", "不小心", "犯", "的"]},
+  {s:"他不是坐高铁来的，他是坐飞机来的。",w:["他", "不是", "坐", "高铁", "来", "的", "他", "是", "坐", "飞机", "来", "的"]},
+  {s:"我不是在网上买的，我是在店里买的。",w:["我", "不是", "在", "网上", "买", "的", "我", "是", "在", "店里", "买", "的"]},
+  {s:"我不是在生你的气，我是在生自己的气。",w:["我", "不是", "在", "生", "你", "的", "气", "我", "是", "在", "生", "自己", "的", "气"]},
+  {s:"不是，他是在北京出生的。",w:["不是", "他", "是", "在", "北京", "出生", "的"]},
+  {s:"他是怎么学会弹钢琴的？",w:["他", "是", "怎么", "学会", "弹", "钢琴", "的"]},
+  {s:"这句话是谁教你的？",w:["这", "句", "话", "是", "谁", "教", "你", "的"]},
+  {s:"这幅画是我妹妹画的。",w:["这", "幅", "画", "是", "我", "妹妹", "画", "的"]},
+  {s:"他是为了学习中文才来的。",w:["他", "是", "为了", "学习", "中文", "才", "来", "的"]},
+  {s:"你们不是约在咖啡店见面的吗？",w:["你们", "不是", "约", "在", "咖啡店", "见面", "的", "吗"]},
+  {s:"不是，这幅画是我姐姐画的。",w:["不是", "这", "幅", "画", "是", "我", "姐姐", "画", "的"]},
+  {s:"是小李提出来的。",w:["是", "小李", "提出来", "的"]},
+  {s:"你们是几点离开会场的？",w:["你们", "是", "几点", "离开", "会场", "的"]},
+  {s:"这些照片是谁拍的？",w:["这", "些", "照片", "是", "谁", "拍", "的"]},
+  {s:"这份文件是谁准备的？",w:["这", "份", "文件", "是", "谁", "准备", "的"]},
+  {s:"这件事是经理决定的。",w:["这", "件", "事", "是", "经理", "决定", "的"]},
+  {s:"这个问题是老师解释的。",w:["这", "个", "问题", "是", "老师", "解释", "的"]},
+  {s:"这个计划是老板同意的。",w:["这", "个", "计划", "是", "老板", "同意", "的"]},
+  {s:"这个消息不是秘书说的。",w:["这", "个", "消息", "不是", "秘书", "说", "的"]},
+  {s:"这个想法是谁提出来的？",w:["这", "个", "想法", "是", "谁", "提出来", "的"]},
+  {s:"他是从后门偷偷进去的。",w:["他", "是", "从", "后门", "偷偷", "进去", "的"]},
+  {s:"这个设计是谁想出来的？",w:["这", "个", "设计", "是", "谁", "想出来", "的"]},
+  {s:"那个错误不是故意造成的。",w:["那", "个", "错误", "不是", "故意", "造成", "的"]},
+  {s:"这个消息是跟谁说的？",w:["这", "个", "消息", "是", "跟", "谁", "说", "的"]},
+  {s:"那场比赛是他们队输的。",w:["那", "场", "比赛", "是", "他们", "队", "输", "的"]},
+  {s:"不是，那个讯息是经理发的。",w:["不是", "那", "个", "讯息", "是", "经理", "发", "的"]},
+  {s:"你是怎么知道这个消息的？",w:["你", "是", "怎么", "知道", "这", "个", "消息", "的"]},
+  {s:"这个消息是秘书通知我的。",w:["这", "个", "消息", "是", "秘书", "通知", "我", "的"]},
+  {s:"他不是故意迟到的，是因为堵车。",w:["他", "不是", "故意", "迟到", "的", "是", "因为", "堵车"]},
+  {s:"那笔钱是经理同意才发的。",w:["那", "笔", "钱", "是", "经理", "同意", "才", "发", "的"]},
+  {s:"你是怎么知道我的手机号码的？",w:["你", "是", "怎么", "知道", "我", "的", "手机", "号码", "的"]},
+  {s:"你们是怎么解决那个技术问题的？",w:["你们", "是", "怎么", "解决", "那", "个", "技术", "问题", "的"]},
+  {s:"他是为了照顾父母才搬回老家的。",w:["他", "是", "为了", "照顾", "父母", "才", "搬回", "老家", "的"]},
+  {s:"我是在图书馆复习的时候睡着的。",w:["我", "是", "在", "图书馆", "复习", "的", "时候", "睡着", "的"]},
+  {s:"他们不是昨天出发的，是前天出发的。",w:["他们", "不是", "昨天", "出发", "的", "是", "前天", "出发", "的"]},
+  {s:"这碗面是老板免费请我们吃的。",w:["这", "碗", "面", "是", "老板", "免费", "请", "我们", "吃", "的"]},
+  {s:"你是用什么软件编辑这个视频的？",w:["你", "是", "用", "什么", "软件", "编辑", "这", "个", "视频", "的"]},
+  {s:"那句话是开玩笑说的，不是认真的。",w:["那", "句", "话", "是", "开玩笑", "说", "的", "不是", "认真", "的"]},
+  {s:"你不是在办公室找到那份文件的吗？",w:["你", "不是", "在", "办公室", "找到", "那", "份", "文件", "的", "吗"]},
+  {s:"他是在国外留学的时候学会做菜的。",w:["他", "是", "在", "国外", "留学", "的", "时候", "学会", "做菜", "的"]},
+  {s:"我是因为没看到消息才没回你的。",w:["我", "是", "因为", "没", "看到", "消息", "才", "没", "回", "你", "的"]},
+  {s:"他是在银行排队的时候被偷的手机。",w:["他", "是", "在", "银行", "排队", "的", "时候", "被", "偷", "的", "手机"]},
+  {s:"你是为什么辞职的？",w:["你", "是", "为什么", "辞职", "的"]},
+  {s:"你们是透过谁介绍认识的？",w:["你们", "是", "透过", "谁", "介绍", "认识", "的"]},
+  {s:"他是跟谁吵架才离职的？",w:["他", "是", "跟", "谁", "吵架", "才", "离职", "的"]},
+  {s:"这个计划是老板亲自决定的。",w:["这", "个", "计划", "是", "老板", "亲自", "决定", "的"]},
+  {s:"这个蛋糕是我妈妈亲手做的。",w:["这", "个", "蛋糕", "是", "我", "妈妈", "亲手", "做", "的"]},
+  {s:"这份礼物是大家一起凑钱买的。",w:["这", "份", "礼物", "是", "大家", "一起", "凑钱", "买", "的"]},
+  {s:"我们是在大学毕业典礼上认识的。",w:["我们", "是", "在", "大学", "毕业", "典礼", "上", "认识", "的"]},
+  {s:"他是什么时候把钥匙交给你的？",w:["他", "是", "什么", "时候", "把", "钥匙", "交", "给", "你", "的"]},
+  {s:"他是用五个小时跑完全马的。",w:["他", "是", "用", "五", "个", "小时", "跑完", "全马", "的"]}
+];
+const DE = [
+  {s:"她跑得很快。",w:["她", "跑", "得", "很", "快"]},
+  {s:"你说得很对。",w:["你", "说", "得", "很", "对"]},
+  {s:"他笑得很开心。",w:["他", "笑", "得", "很", "开心"]},
+  {s:"他打球打得很好。",w:["他", "打球", "打", "得", "很", "好"]},
+  {s:"她做饭做得好吗？",w:["她", "做饭", "做", "得", "好", "吗"]},
+  {s:"你做菜做得好吗？",w:["你", "做菜", "做", "得", "好", "吗"]},
+  {s:"他写字写得很好看。",w:["他", "写字", "写", "得", "很", "好看"]},
+  {s:"你饭吃得太快了。",w:["你", "饭", "吃", "得", "太", "快", "了"]},
+  {s:"他跑得比我还快。",w:["他", "跑", "得", "比", "我", "还", "快"]},
+  {s:"你的字写得很漂亮。",w:["你", "的", "字", "写", "得", "很", "漂亮"]},
+  {s:"我中文说得不太好。",w:["我", "中文", "说", "得", "不", "太", "好"]},
+  {s:"你做得已经很好了。",w:["你", "做", "得", "已经", "很", "好", "了"]},
+  {s:"我妈妈做饭做得很好。",w:["我", "妈妈", "做饭", "做", "得", "很", "好"]},
+  {s:"你们学日语学得好快啊！",w:["你们", "学", "日语", "学", "得", "好", "快", "啊"]},
+  {s:"她钢琴弹得怎么样？",w:["她", "钢琴", "弹", "得", "怎么样"]},
+  {s:"她美得像一朵花。",w:["她", "美", "得", "像", "一朵", "花"]},
+  {s:"我们老师教得很棒。",w:["我们", "老师", "教", "得", "很", "棒"]},
+  {s:"他工作做得很认真。",w:["他", "工作", "做", "得", "很", "认真"]},
+  {s:"她高兴得跳了起来。",w:["她", "高兴", "得", "跳", "了", "起来"]},
+  {s:"你唱歌唱得真好听。",w:["你", "唱歌", "唱", "得", "真", "好听"]},
+  {s:"她演得跟真的一样。",w:["她", "演", "得", "跟", "真的", "一样"]},
+  {s:"他学习学得非常努力。",w:["他", "学习", "学", "得", "非常", "努力"]},
+  {s:"她哭得眼睛都红了。",w:["她", "哭", "得", "眼睛", "都", "红", "了"]},
+  {s:"我饿得能吃下一头牛。",w:["我", "饿", "得", "能", "吃下", "一头", "牛"]},
+  {s:"你写得比上次进步很多。",w:["你", "写", "得", "比", "上次", "进步", "很多"]},
+  {s:"这个地方美得像画一样。",w:["这个", "地方", "美", "得", "像", "画", "一样"]},
+  {s:"她日文说得很流利。",w:["她", "日文", "说", "得", "很", "流利"]},
+  {s:"我吓得大叫了一声。",w:["我", "吓", "得", "大叫", "了", "一声"]},
+  {s:"她伤心得好多天没出门。",w:["她", "伤心", "得", "好多天", "没", "出门"]},
+  {s:"他答得又快又准。",w:["他", "答", "得", "又", "快", "又", "准"]},
+  {s:"他记单词记得很快。",w:["他", "记", "单词", "记", "得", "很", "快"]},
+  {s:"我气得直接挂了电话。",w:["我", "气", "得", "直接", "挂", "了", "电话"]},
+  {s:"他修电脑修得很厉害。",w:["他", "修", "电脑", "修", "得", "很", "厉害"]},
+  {s:"今天天气热得让人受不了。",w:["今天", "天气", "热", "得", "让", "人", "受不了"]},
+  {s:"这道题难得我思考了很久。",w:["这道", "题", "难", "得", "我", "思考", "了", "很久"]},
+  {s:"我忙得连喝水的时间都没有。",w:["我", "忙", "得", "连", "喝水", "的", "时间", "都", "没有"]},
+  {s:"你穿得很时尚。",w:["你", "穿", "得", "很", "时尚"]},
+  {s:"你书法写得怎么样？",w:["你", "书法", "写", "得", "怎么样"]},
+  {s:"我紧张得手心冒汗。",w:["我", "紧张", "得", "手心", "冒汗"]},
+  {s:"他准备得十分充分。",w:["他", "准备", "得", "十分", "充分"]},
+  {s:"他解释得简单明了。",w:["他", "解释", "得", "简单", "明了"]},
+  {s:"你考虑得非常周到。",w:["你", "考虑", "得", "非常", "周到"]},
+  {s:"我兴奋得整晚睡不着。",w:["我", "兴奋", "得", "整晚", "睡不着"]},
+  {s:"他累得倒头就睡。",w:["他", "累", "得", "倒头", "就", "睡"]},
+  {s:"他开车开得非常稳。",w:["他", "开车", "开", "得", "非常", "稳"]},
+  {s:"她打扮得像个明星。",w:["她", "打扮", "得", "像", "个", "明星"]},
+  {s:"这个箱子重得我搬不动。",w:["这个", "箱子", "重", "得", "我", "搬不动"]},
+  {s:"她写日记写得很勤奋。",w:["她", "写", "日记", "写", "得", "很", "勤奋"]},
+  {s:"她照顾病人照顾得很细心。",w:["她", "照顾", "病人", "照顾", "得", "很", "细心"]},
+  {s:"他生气得一句话也说不出来。",w:["他", "生气", "得", "一句", "话", "也", "说不出来"]},
+  {s:"这个问题复杂得我完全搞不懂。",w:["这个", "问题", "复杂", "得", "我", "完全", "搞不懂"]},
+  {s:"他负责的事情做得很到位。",w:["他", "负责", "的", "事情", "做", "得", "很", "到位"]},
+  {s:"这个故事感动得我流下了眼泪。",w:["这个", "故事", "感动", "得", "我", "流下", "了", "眼泪"]},
+  {s:"你做得比我想象的还要好。",w:["你", "做", "得", "比", "我", "想象", "的", "还要", "好"]},
+  {s:"他跑得气喘吁吁。",w:["他", "跑", "得", "气喘吁吁"]},
+  {s:"你解释得清清楚楚。",w:["你", "解释", "得", "清清楚楚"]},
+  {s:"你整理得整整齐齐。",w:["你", "整理", "得", "整整齐齐"]},
+  {s:"他打扫得干干净净。",w:["他", "打扫", "得", "干干净净"]},
+  {s:"你安排得妥妥当当。",w:["你", "安排", "得", "妥妥当当"]},
+  {s:"这个消息让人震惊得说不出话。",w:["这个", "消息", "让", "人", "震惊", "得", "说不出", "话"]}
+];
+
+const SETS = {
+    shi: { name: "是…的句", data: SHI },
+    de:  { name: "补语得",  data: DE }
+};
+document.getElementById('cnt-shi').textContent = "共 " + SHI.length + " 题";
+document.getElementById('cnt-de').textContent  = "共 " + DE.length  + " 题";
+
+const mem = {};
+const Store = {
+    async get(key){
+        try{ if(window.storage){ const r=await window.storage.get(key); return r?r.value:null; } }catch(e){}
+        try{ if(window.localStorage) return localStorage.getItem(key); }catch(e){}
+        return key in mem ? mem[key] : null;
+    },
+    async set(key,val){
+        try{ if(window.storage){ await window.storage.set(key,val); return; } }catch(e){}
+        try{ if(window.localStorage){ localStorage.setItem(key,val); return; } }catch(e){}
+        mem[key]=val;
+    }
+};
+function progKey(mode){ return "rebuild:"+mode; }
+
+let mode=null, list=[], currentIdx=0, userSelection=[];
+
+async function refreshResume(){
+    for(const m of ["shi","de"]){
+        const total=SETS[m].data.length;
+        const saved=parseInt(await Store.get(progKey(m)))||0;
+        const el=document.getElementById('resume-'+m);
+        if(saved>0 && saved<total) el.textContent="接续第 "+(saved+1)+" 题";
+        else if(saved>=total)      el.textContent="已完成一轮，重新开始";
+        else                       el.textContent="从第 1 题开始";
+    }
+}
+async function startMode(m){
+    mode=m; list=SETS[m].data;
+    let saved=parseInt(await Store.get(progKey(m)))||0;
+    if(saved>=list.length) saved=0;
+    currentIdx=saved;
+    document.getElementById('home').classList.add('hidden');
+    document.getElementById('practice').classList.remove('hidden');
+    document.getElementById('mode-title').textContent=SETS[m].name;
+    loadQuestion();
+}
+function goHome(){
+    document.getElementById('practice').classList.add('hidden');
+    document.getElementById('home').classList.remove('hidden');
+    refreshResume();
+}
+function loadQuestion(){
+    const q=list[currentIdx];
+    document.getElementById('q-progress').textContent="第 "+(currentIdx+1)+" 题 / 共 "+list.length+" 题";
+    document.getElementById('feedback').innerHTML="";
+    document.getElementById('answer-area').innerHTML="";
+    userSelection=[];
+    const pool=document.getElementById('word-pool'); pool.innerHTML="";
+    q.w.map((w,i)=>({w,i})).sort(()=>Math.random()-0.5).forEach(({w,i})=>{
+        const btn=document.createElement('div');
+        btn.className='word-card'; btn.textContent=w; btn.dataset.idx=i;
+        btn.onclick=()=>selectWord(w,btn);
+        pool.appendChild(btn);
+    });
+}
+function selectWord(word,poolCard){
+    userSelection.push(word);
+    poolCard.classList.add('used');
+    const ansArea=document.getElementById('answer-area');
+    const ansCard=document.createElement('div');
+    ansCard.className='word-card'; ansCard.textContent=word;
+    ansCard.onclick=()=>{
+        const pos=userSelection.lastIndexOf(word);
+        if(pos>-1) userSelection.splice(pos,1);
+        ansCard.remove(); poolCard.classList.remove('used');
+        document.getElementById('feedback').innerHTML="";
+    };
+    ansArea.appendChild(ansCard);
+}
+function resetCurrent(){ loadQuestion(); }
+function checkAnswer(){
+    const q=list[currentIdx];
+    const fb=document.getElementById('feedback');
+    if(userSelection.join('')===q.w.join('')){
+        fb.innerHTML="太棒了！答对了 🎉<span class='ans'>"+q.s+"</span>";
+        fb.style.color="#00b894";
+    }else{
+        fb.innerHTML="顺序不对喔，再试试看！💪";
+        fb.style.color="#d63031";
+    }
+}
+async function nextQuestion(){
+    const nextIdx=(currentIdx+1)%list.length;
+    await Store.set(progKey(mode), String(nextIdx===0?list.length:nextIdx));
+    currentIdx=nextIdx; loadQuestion();
+}
+refreshResume();
+</script>
+</body>
+</html>
